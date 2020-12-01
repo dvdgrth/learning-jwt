@@ -28,14 +28,21 @@ app.post(
   "/login",
   passport.authenticate("local", { session: false }),
   function (req, res) {
-    const token = jwt.sign({ foo: "bar" }, process.env.JWT_SECRET);
+    const token = jwt.sign(
+      { sub: req.user._id, name: req.user.username },
+      process.env.JWT_SECRET
+    );
     res.send(token);
   }
 );
 
-app.get("/dashboard", (req, res) => {
-  res.send("You made it to dashboard!");
-});
+app.get(
+  "/dashboard",
+  passport.authenticate("jwt", { session: false }),
+  (req, res) => {
+    res.send(`${req.user.username}, you made it to dashboard!`);
+  }
+);
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname + "/views/home.html"));
