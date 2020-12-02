@@ -6,34 +6,59 @@ const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const passport = require("./auth");
 const User = require("./models/User");
+const cookieParser = require("cookie-parser");
+const Token = require("./models/Token");
 
 const app = express();
 
 app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
 app.use(express.json());
+app.use(cookieParser());
 
 mongoose.connect(process.env.DB_ADDRESS, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
 
+const sendNewToken = function (req, res, next) {
+  const token = jwt.sign(
+    { sub: req.user._id, name: req.user.username },
+    process.env.JWT_SECRET,
+    { expiresIn: 10 }
+  );
+  res.send(token);
+};
+
+const setRefreshToken = function (req, res, next) {
+  const refreshToken = jwt.sign(
+    { sub: req.user._id, name: req.user.username },
+    process.env.REFRESH_TOKEN_SECRET,
+    { expiresIn: "100d" }
+  );
+  req.user.refreshToken = res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+  });
+  new Token(jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET)).save();
+  next();
+};
+
 app.post("/signup", (req, res) => {
-  console.log(req.body);
-  res.json(req.body);
   new User({ username: req.body.username, password: req.body.password }).save();
+  res.json(req.body);
 });
 
 app.post(
   "/login",
   passport.authenticate("local", { session: false }),
-  function (req, res) {
-    const token = jwt.sign(
-      { sub: req.user._id, name: req.user.username },
-      process.env.JWT_SECRET
-    );
-    res.send(token);
-  }
+  setRefreshToken,
+  sendNewToken
+);
+
+app.get(
+  "/refresh",
+  passport.authenticate("refreshTokenStrategy", { session: false }),
+  sendNewToken
 );
 
 app.get(
