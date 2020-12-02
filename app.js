@@ -7,7 +7,6 @@ const jwt = require("jsonwebtoken");
 const passport = require("./auth");
 const User = require("./models/User");
 const cookieParser = require("cookie-parser");
-const Token = require("./models/Token");
 
 const app = express();
 
