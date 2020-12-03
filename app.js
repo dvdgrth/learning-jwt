@@ -37,8 +37,8 @@ const setRefreshToken = function (req, res, next) {
   );
   req.user.refreshToken = res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
+    path: "/refresh",
   });
-  new Token(jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET)).save();
   next();
 };
 
